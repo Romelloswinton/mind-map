@@ -1,26 +1,639 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 🔥 ENHANCED: Mind Map & React Flow Styles */
+
+/* Connection mode cursor */
+.connecting-mode {
+  cursor: crosshair !important;
+}
+
+.connecting-mode .react-flow__node {
+  cursor: pointer !important;
+}
+
+.connecting-mode .react-flow__node:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  transition: all 0.2s ease;
+}
+
+/* Enhanced node hover effects - only when NOT resizing */
+.react-flow__node:hover:not([data-resizing="true"]) {
+  z-index: 10;
+  filter: brightness(1.05);
+  transition: all 0.2s ease;
+}
+
+.react-flow__node.selected {
+  z-index: 20;
+}
+
+/* 🚀 INSTANT RESIZE CRITICAL SECTION - NO DELAYS ALLOWED */
+
+/* 🔥 CRITICAL: COMPLETELY REMOVE NodeResizer built-in outline */
+.react-flow__resize-control-line {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+}
+
+/* 🚀 INSTANT: Ultra-responsive resize handles with high visibility */
+.react-flow__resize-control {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a52);
+  border: 3px solid #ffffff;
+  border-radius: 50%;
+  width: 12px;
+  height: 12px;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  z-index: 1000;
+  /* 🔥 CRITICAL: NO TRANSITIONS on resize handles */
+  transition: none !important;
+  transform: translate(-50%, -50%);
+  position: relative;
+}
+
+/* 🎯 ENHANCED: Pulsing ring effect for better visibility */
+.react-flow__resize-control::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  border: 2px solid rgba(255, 107, 107, 0.3);
+  border-radius: 50%;
+  animation: handle-pulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes handle-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.1;
+  }
+}
+
+.react-flow__resize-control:hover {
+  background: linear-gradient(135deg, #ff5252, #d32f2f);
+  transform: translate(-50%, -50%) scale(1.3);
+  box-shadow: 0 4px 12px rgba(255, 82, 82, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  /* 🚀 INSTANT: Only allow hover transitions when NOT actively resizing */
+  transition: all 0.15s ease;
+}
+
+/* 🔥 ACTIVE STATE: Even more visible when actively resizing */
+.react-flow__node[data-resizing="true"] .react-flow__resize-control {
+  background: linear-gradient(135deg, #4caf50, #388e3c);
+  box-shadow: 0 3px 10px rgba(76, 175, 80, 0.5), 0 1px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  animation: active-resize-pulse 1s ease-in-out infinite;
+}
+
+@keyframes active-resize-pulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+/* 🎯 CORNER INDICATORS: Different colors for different corners */
+.react-flow__resize-control[data-handlepos="top-left"],
+.react-flow__resize-control[data-handlepos="bottom-right"] {
+  background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+}
+
+.react-flow__resize-control[data-handlepos="top-right"],
+.react-flow__resize-control[data-handlepos="bottom-left"] {
+  background: linear-gradient(135deg, #ff9800, #f57c00);
+}
+
+.react-flow__resize-control[data-handlepos="top"],
+.react-flow__resize-control[data-handlepos="bottom"] {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+}
+
+.react-flow__resize-control[data-handlepos="left"],
+.react-flow__resize-control[data-handlepos="right"] {
+  background: linear-gradient(135deg, #00bcd4, #0097a7);
+}
+
+/* 🚀 INSTANT RESIZE: Remove ALL transitions during resize */
+.react-flow__node[data-resizing="true"] {
+  /* 🔥 CRITICAL: NO TRANSITIONS WHATSOEVER */
+  transition: none !important;
+  animation: none !important;
+
+  /* Remove ALL conflicting styles instantly */
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  --tw-ring-shadow: none !important;
+  --tw-shadow: none !important;
+  --tw-border-opacity: 0 !important;
+  --tw-ring-opacity: 0 !important;
+
+  /* Clean positioning */
+  position: relative;
+  z-index: 1000;
+}
+
+/* 🚀 INSTANT: All child elements during resize */
+.react-flow__node[data-resizing="true"] *,
+.react-flow__node[data-resizing="true"] *::before,
+.react-flow__node[data-resizing="true"] *::after {
+  transition: none !important;
+  animation: none !important;
+  will-change: auto !important;
+}
+
+/* 🔥 CRITICAL: Override ALL selection styling during resize */
+.react-flow__node[data-resizing="true"].selected {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  ring: none !important;
+  --tw-ring-shadow: none !important;
+}
+
+/* 🚀 INSTANT: Hide handles during resize for clean UX */
+.react-flow__node[data-resizing="true"] .react-flow__handle {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+/* 🚀 INSTANT: Make resize handles instantly responsive */
+.react-flow__node[data-resizing="true"] .react-flow__resize-control {
+  transition: none !important;
+}
+
+/* 🚀 INSTANT: Remove node content opacity changes during resize */
+.react-flow__node[data-resizing="true"] > div:first-child {
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+/* 🚀 END INSTANT RESIZE SECTION */
+
+/* 🔥 NORMAL STATE: Smooth animations when NOT resizing */
+.react-flow__node:not([data-resizing="true"]) {
+  transition: all 0.2s ease;
+}
+
+/* Shape-specific enhancements */
+.react-flow__node[data-shape="circle"] {
+  border-radius: 50% !important;
+}
+
+.react-flow__node[data-shape="diamond"] {
+  transform: rotate(45deg);
+  overflow: visible;
+}
+
+.react-flow__node[data-shape="triangle"] {
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+/* Connection line animations */
+.react-flow__edge {
+  transition: stroke-width 0.2s ease;
+}
+
+.react-flow__edge:hover {
+  stroke-width: 3px;
+}
+
+/* Handle visibility improvements - only when NOT resizing */
+.react-flow__handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.react-flow__node:hover:not([data-resizing="true"]) .react-flow__handle,
+.react-flow__node.selected:not([data-resizing="true"]) .react-flow__handle {
+  opacity: 1;
+}
+
+/* Connecting mode handle highlights */
+.connecting-mode .react-flow__handle {
+  opacity: 1 !important;
+  background: #10b981 !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 2px #10b981;
+}
+
+/* 🔥 ENHANCED: Minimap enhancements */
+.react-flow__minimap-node[data-shape="circle"] {
+  border-radius: 50%;
+}
+
+.react-flow__minimap-node[data-shape="diamond"] {
+  transform: rotate(45deg);
+}
+
+/* Background pattern enhancements */
+.react-flow__background {
+  background-size: 20px 20px;
+}
+
+/* Selection box improvements */
+.react-flow__selection {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px dashed #3b82f6;
+}
+
+/* Control button improvements */
+.react-flow__controls-button {
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.react-flow__controls-button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* 🔥 Enhanced node selection styles - only when NOT resizing */
+.react-flow__node.selected:not([data-resizing="true"]) {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* 🔥 Edge connection animations */
+.react-flow__edge.animated {
+  stroke-dasharray: 5;
+  animation: dashdraw 0.5s linear infinite;
+}
+
+@keyframes dashdraw {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* 🔥 Loading state for nodes */
+.react-flow__node.loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.react-flow__node.loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 🔥 Toolbar enhancements */
+.toolbar-button-active {
+  background: #3b82f6 !important;
+  color: white !important;
+  transform: scale(1.05);
+}
+
+.toolbar-separator {
+  height: 24px;
+  width: 1px;
+  background: #e5e7eb;
+  margin: 0 8px;
+}
+
+/* 🔥 Shape preview in toolbar */
+.shape-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 8px;
+}
+
+.shape-preview.circle {
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.shape-preview.diamond {
+  transform: rotate(45deg);
+  background: currentColor;
+}
+
+.shape-preview.triangle {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 14px solid currentColor;
+  background: none;
+}
+
+/* 🔥 Connection mode indicator */
+.connection-mode-indicator {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(16, 185, 129, 0.9);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 500;
+  z-index: 1000;
+  pointer-events: none;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* Utility classes for common patterns */
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(to right, rgb(147 51 234), rgb(37 99 235));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .line-clamp-1 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  /* 🔥 Mind map specific utilities */
+  .node-shadow {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+
+  .node-shadow-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  }
+
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+  }
+
+  @keyframes pulse-ring {
+    0% {
+      transform: scale(0.33);
+      opacity: 1;
+    }
+    80%,
+    100% {
+      transform: scale(2.4);
+      opacity: 0;
+    }
+  }
+
+  /* 🚀 INSTANT RESIZE: Optimized resize utilities */
+  .resize-indicator {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    width: 16px;
+    height: 16px;
+    background: #3b82f6;
+    border: 2px solid white;
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    /* 🔥 CONDITIONAL: Only animate when NOT actively resizing */
+    transition: opacity 0.2s ease;
+  }
+
+  .react-flow__node[data-resizing="true"] .resize-indicator {
+    opacity: 1;
+    transition: none !important;
+    animation: none !important;
+  }
+
+  /* 🚀 INSTANT OUTLINE: No animations during resize */
+  .resize-outline {
+    pointer-events: none !important;
+    /* 🔥 CONDITIONAL: Only animate when specifically enabled */
+  }
+
+  /* 🚀 INSTANT: Static outline during resize */
+  .resize-outline.static {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+  }
+
+  /* 🔥 ANIMATED: Only for non-resize states */
+  .resize-outline.animated {
+    animation: resize-outline-pulse 1.2s ease-in-out infinite;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1);
+  }
+
+  @keyframes resize-outline-pulse {
+    0%,
+    100% {
+      opacity: 0.8;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.01);
+    }
+  }
+}
+
+/* 🚀 SHAPE-SPECIFIC INSTANT RESIZE OPTIMIZATIONS */
+
+/* 🔥 SVG-specific instant rendering */
+.resize-outline svg {
+  /* 🚀 CONDITIONAL: Only add effects when NOT actively resizing */
+}
+
+.resize-outline.static svg {
+  filter: none !important;
+}
+
+.resize-outline.animated svg {
+  filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.3));
+}
+
+.resize-outline path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 🚀 INSTANT: Shape-specific optimizations */
+.resize-outline.static[data-shape="diamond"] {
+  filter: none !important;
+}
+
+.resize-outline.animated[data-shape="diamond"] {
+  filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.4));
+}
+
+.resize-outline.static[data-shape="triangle"] {
+  filter: none !important;
+}
+
+.resize-outline.animated[data-shape="triangle"] {
+  filter: drop-shadow(0 0 5px rgba(59, 130, 246, 0.35));
+}
+
+.resize-outline.static[data-shape="circle"] {
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.resize-outline.animated[data-shape="circle"] {
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1), 0 0 8px rgba(59, 130, 246, 0.2);
+}
+
+.resize-outline.static[data-shape="rectangle"] {
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.resize-outline.animated[data-shape="rectangle"] {
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.1),
+    0 0 6px rgba(59, 130, 246, 0.15);
+}
+
+/* 🚀 PERFORMANCE: Hardware acceleration only when needed */
+.resize-outline.animated,
+.resize-outline.animated svg,
+.resize-outline.animated path {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+.resize-outline.static,
+.resize-outline.static svg,
+.resize-outline.static path {
+  will-change: auto;
+}
+
+/* 🔥 ACCESSIBILITY: Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .resize-outline.animated {
+    animation: none !important;
+    opacity: 0.9;
+  }
+
+  .connecting-mode .react-flow__node:hover {
+    transition: none;
+    transform: none;
+  }
+
+  .react-flow__node:hover:not([data-resizing="true"]) {
+    transition: none;
+  }
 }
