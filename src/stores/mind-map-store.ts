@@ -5,13 +5,24 @@ import { Node, Edge } from "@xyflow/react"
 export type NodeShape = "rectangle" | "circle" | "diamond" | "triangle"
 export type ConnectionType = "straight" | "curved" | "step" | "bezier"
 
+// 🎨 ENHANCED: Extended MindMapNodeData with drawing tool properties
 export interface MindMapNodeData extends Record<string, unknown> {
   text: string
   color: string
   isEditing: boolean
-  shape?: NodeShape // 🔥 NEW: Add shape property
+  shape?: NodeShape
+
+  // 🎨 NEW: Drawing tool customization properties
+  strokeColor?: string
+  fillColor?: string
+  strokeWidth?: number
+  strokeStyle?: "solid" | "dashed" | "dotted"
+  opacity?: number
+  sloppiness?: number
+  edgeStyle?: "square" | "rounded"
 }
 
+// 🎨 ENHANCED: Extended MindMapNode with drawing tool properties
 export interface MindMapNode {
   id: string
   text: string
@@ -20,8 +31,17 @@ export interface MindMapNode {
   width: number
   height: number
   color: string
-  shape?: NodeShape // 🔥 NEW: Add shape property
+  shape?: NodeShape
   parentId?: string
+
+  // 🎨 NEW: Drawing tool properties for persistence
+  strokeColor?: string
+  fillColor?: string
+  strokeWidth?: number
+  strokeStyle?: "solid" | "dashed" | "dotted"
+  opacity?: number
+  sloppiness?: number
+  edgeStyle?: "square" | "rounded"
 }
 
 export interface MindMap {
@@ -47,6 +67,17 @@ export interface ViewportState {
 // Type alias for our specific node type
 export type ReactFlowNode = Node<MindMapNodeData>
 
+// 🎨 NEW: Drawing tool default settings interface
+export interface DrawingToolDefaults {
+  strokeColor: string
+  fillColor: string
+  strokeWidth: number
+  strokeStyle: "solid" | "dashed" | "dotted"
+  opacity: number
+  sloppiness: number
+  edgeStyle: "square" | "rounded"
+}
+
 interface MindMapStore {
   // Current mind map state
   mindMapId: string | null
@@ -59,6 +90,12 @@ interface MindMapStore {
   selectedNodeShape: NodeShape
   connectionMode: ConnectionType | null
   isConnecting: boolean
+
+  // 🔥 NEW: Drawing tools state
+  drawingToolsManuallyOpened: boolean
+
+  // 🎨 NEW: Drawing tool defaults for new nodes
+  drawingToolDefaults: DrawingToolDefaults
 
   // UI state
   isLoading: boolean
@@ -84,6 +121,24 @@ interface MindMapStore {
   setSelectedNodeShape: (shape: NodeShape) => void
   setConnectionMode: (mode: ConnectionType | null) => void
   setIsConnecting: (connecting: boolean) => void
+
+  // 🔥 NEW: Drawing tools actions
+  setDrawingToolsManuallyOpened: (opened: boolean) => void
+
+  // 🎨 NEW: Drawing tool defaults management
+  setDrawingToolDefaults: (defaults: Partial<DrawingToolDefaults>) => void
+  resetDrawingToolDefaults: () => void
+  getDrawingToolDefaults: () => DrawingToolDefaults
+
+  // 🎨 ENHANCED: Node styling actions
+  applyDrawingToolsToNode: (
+    nodeId: string,
+    properties: Partial<MindMapNodeData>
+  ) => void
+  applyDrawingToolsToSelectedNodes: (
+    properties: Partial<MindMapNodeData>
+  ) => void
+  resetNodeStyling: (nodeId: string) => void
 
   // Canvas specific actions
   addNodeAtPosition: (
@@ -128,6 +183,17 @@ interface MindMapStore {
 
 const initialViewport: ViewportState = { x: 0, y: 0, zoom: 1 }
 
+// 🎨 NEW: Default drawing tool settings
+const defaultDrawingToolDefaults: DrawingToolDefaults = {
+  strokeColor: "#6b7280",
+  fillColor: "#3b82f6",
+  strokeWidth: 2,
+  strokeStyle: "solid",
+  opacity: 1.0,
+  sloppiness: 0,
+  edgeStyle: "rounded",
+}
+
 export const useMindMapStore = create<MindMapStore>((set, get) => ({
   // Initial state
   mindMapId: null,
@@ -140,6 +206,12 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
   selectedNodeShape: "rectangle",
   connectionMode: null,
   isConnecting: false,
+
+  // 🔥 NEW: Drawing tools state
+  drawingToolsManuallyOpened: false,
+
+  // 🎨 NEW: Drawing tool defaults
+  drawingToolDefaults: { ...defaultDrawingToolDefaults },
 
   isLoading: false,
   isSaving: false,
@@ -171,6 +243,8 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
     )
 
     set({ nodes: updatedNodes, hasUnsavedChanges: true })
+
+    console.log(`📝 Updated node ${nodeId}:`, data)
   },
 
   deleteNode: (nodeId) => {
@@ -207,15 +281,92 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
     set({ connectionMode: mode, isConnecting: !!mode }),
   setIsConnecting: (connecting) => set({ isConnecting: connecting }),
 
-  // 🔥 UPDATED: Canvas specific actions with shape support
+  // 🔥 NEW: Drawing tools setter
+  setDrawingToolsManuallyOpened: (opened) =>
+    set({ drawingToolsManuallyOpened: opened }),
+
+  // 🎨 NEW: Drawing tool defaults management
+  setDrawingToolDefaults: (defaults) => {
+    const currentDefaults = get().drawingToolDefaults
+    set({
+      drawingToolDefaults: { ...currentDefaults, ...defaults },
+      hasUnsavedChanges: true,
+    })
+    console.log("🎨 Updated drawing tool defaults:", defaults)
+  },
+
+  resetDrawingToolDefaults: () => {
+    set({ drawingToolDefaults: { ...defaultDrawingToolDefaults } })
+    console.log("🔄 Reset drawing tool defaults")
+  },
+
+  getDrawingToolDefaults: () => get().drawingToolDefaults,
+
+  // 🎨 NEW: Node styling actions
+  applyDrawingToolsToNode: (nodeId, properties) => {
+    const { nodes } = get()
+
+    const updatedNodes = nodes.map((node) =>
+      node.id === nodeId
+        ? { ...node, data: { ...node.data, ...properties } }
+        : node
+    )
+
+    set({ nodes: updatedNodes, hasUnsavedChanges: true })
+    console.log(`🎨 Applied styling to node ${nodeId}:`, properties)
+  },
+
+  applyDrawingToolsToSelectedNodes: (properties) => {
+    const { nodes, selectedNodeId } = get()
+
+    if (!selectedNodeId) {
+      console.warn("⚠️ No node selected for styling")
+      return
+    }
+
+    get().applyDrawingToolsToNode(selectedNodeId, properties)
+  },
+
+  resetNodeStyling: (nodeId) => {
+    const { nodes } = get()
+
+    const resetProperties: Partial<MindMapNodeData> = {
+      strokeColor: undefined,
+      fillColor: undefined,
+      strokeWidth: undefined,
+      strokeStyle: undefined,
+      opacity: undefined,
+      sloppiness: undefined,
+      edgeStyle: undefined,
+    }
+
+    const updatedNodes = nodes.map((node) =>
+      node.id === nodeId
+        ? {
+            ...node,
+            data: {
+              ...node.data,
+              ...resetProperties,
+              color: get().drawingToolDefaults.fillColor, // Reset to default color
+            },
+          }
+        : node
+    )
+
+    set({ nodes: updatedNodes, hasUnsavedChanges: true })
+    console.log(`🔄 Reset styling for node ${nodeId}`)
+  },
+
+  // 🔥 UPDATED: Canvas specific actions with shape and drawing tool support
   addNodeAtPosition: (position, parentId, shape) => {
-    const { nodes, edges, selectedNodeShape } = get()
+    const { nodes, edges, selectedNodeShape, drawingToolDefaults } = get()
     const nodeId = `node-${Date.now()}-${Math.random()
       .toString(36)
       .substr(2, 9)}`
 
     get().pushToHistory()
 
+    // 🎨 NEW: Apply current drawing tool defaults to new nodes
     const newNode: ReactFlowNode = {
       id: nodeId,
       type: "mindMapNode",
@@ -226,9 +377,18 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       },
       data: {
         text: "New Idea",
-        color: "#3b82f6",
+        color: drawingToolDefaults.fillColor,
         isEditing: true,
-        shape: shape || selectedNodeShape, // 🔥 NEW: Use provided shape or selected shape
+        shape: shape || selectedNodeShape,
+
+        // 🎨 Apply current drawing tool defaults
+        strokeColor: drawingToolDefaults.strokeColor,
+        fillColor: drawingToolDefaults.fillColor,
+        strokeWidth: drawingToolDefaults.strokeWidth,
+        strokeStyle: drawingToolDefaults.strokeStyle,
+        opacity: drawingToolDefaults.opacity,
+        sloppiness: drawingToolDefaults.sloppiness,
+        edgeStyle: drawingToolDefaults.edgeStyle,
       },
     }
 
@@ -253,6 +413,7 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       hasUnsavedChanges: true,
     })
 
+    console.log(`🎨 Created node with drawing tool defaults:`, newNode.data)
     return nodeId
   },
 
@@ -317,6 +478,7 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
     set({ edges: [...edges, newEdge], hasUnsavedChanges: true })
   },
 
+  // 🎨 ENHANCED: Duplicate node with all styling properties
   duplicateNode: (nodeId) => {
     const { nodes } = get()
     const nodeToDuplicate = nodes.find((node) => node.id === nodeId)
@@ -337,7 +499,7 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
         height: nodeToDuplicate.style?.height || 120,
       },
       data: {
-        ...nodeToDuplicate.data,
+        ...nodeToDuplicate.data, // This now includes all drawing tool properties
         text: `${nodeToDuplicate.data.text} (Copy)`,
       },
     }
@@ -347,6 +509,8 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       selectedNodeId: duplicatedNode.id,
       hasUnsavedChanges: true,
     })
+
+    console.log(`📋 Duplicated node with all styling:`, duplicatedNode.data)
   },
 
   // Save/Load state management
@@ -389,6 +553,7 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
         historyIndex: historyIndex - 1,
         hasUnsavedChanges: true,
       })
+      console.log("↩️ Undo applied")
       return true
     }
     return false
@@ -405,6 +570,7 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
         historyIndex: historyIndex + 1,
         hasUnsavedChanges: true,
       })
+      console.log("↪️ Redo applied")
       return true
     }
     return false
@@ -431,6 +597,8 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       selectedNodeShape: "rectangle",
       connectionMode: null,
       isConnecting: false,
+      drawingToolsManuallyOpened: false,
+      drawingToolDefaults: { ...defaultDrawingToolDefaults }, // 🎨 Reset drawing tool defaults
       isLoading: false,
       isSaving: false,
       hasUnsavedChanges: false,
@@ -452,5 +620,48 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       hasUnsavedChanges: true,
     })
     get().pushToHistory()
+    console.log("📥 Data imported successfully")
   },
 }))
+
+// 🎨 NEW: Helper selectors for drawing tools integration
+export const useMindMapDrawingTools = () => {
+  const store = useMindMapStore()
+
+  return {
+    // Drawing tool defaults
+    drawingToolDefaults: store.drawingToolDefaults,
+    setDrawingToolDefaults: store.setDrawingToolDefaults,
+    resetDrawingToolDefaults: store.resetDrawingToolDefaults,
+    getDrawingToolDefaults: store.getDrawingToolDefaults,
+
+    // Node styling actions
+    applyDrawingToolsToNode: store.applyDrawingToolsToNode,
+    applyDrawingToolsToSelectedNodes: store.applyDrawingToolsToSelectedNodes,
+    resetNodeStyling: store.resetNodeStyling,
+
+    // Selected node info
+    selectedNodeId: store.selectedNodeId,
+    selectedNode: store.nodes.find((node) => node.id === store.selectedNodeId),
+
+    // Utility functions
+    getNodeById: (nodeId: string) =>
+      store.nodes.find((node) => node.id === nodeId),
+    getSelectedNodeStyling: () => {
+      const selectedNode = store.nodes.find(
+        (node) => node.id === store.selectedNodeId
+      )
+      if (!selectedNode) return null
+
+      return {
+        strokeColor: selectedNode.data.strokeColor,
+        fillColor: selectedNode.data.fillColor,
+        strokeWidth: selectedNode.data.strokeWidth,
+        strokeStyle: selectedNode.data.strokeStyle,
+        opacity: selectedNode.data.opacity,
+        sloppiness: selectedNode.data.sloppiness,
+        edgeStyle: selectedNode.data.edgeStyle,
+      }
+    },
+  }
+}

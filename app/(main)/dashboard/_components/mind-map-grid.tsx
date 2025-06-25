@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Filter, Grid, List, Plus, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useDashboardStore } from "@/src/stores/dashboard-store"
 import { CreateMindMapDialog } from "./create-mind-map-dialog"
 import { MindMapCard } from "./mind-map-card"
+import { useDashboardStore } from "@/src/stores/dashboard-store"
 
 export function MindMapGrid() {
   const {

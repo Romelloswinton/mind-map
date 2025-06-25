@@ -1,5 +1,5 @@
-import React from "react"
 import { NodeShape } from "@/src/stores/mind-map-store"
+import React from "react"
 
 interface ShapeOutlineProps {
   shape: NodeShape

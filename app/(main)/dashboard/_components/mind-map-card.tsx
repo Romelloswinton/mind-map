@@ -35,7 +35,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatDistanceToNow } from "date-fns"
-import { MindMap } from "@/src/stores/dashboard-store"
+import { MindMap } from "@/public/stores/dashboard-store"
 
 interface MindMapCardProps {
   mindMap: MindMap

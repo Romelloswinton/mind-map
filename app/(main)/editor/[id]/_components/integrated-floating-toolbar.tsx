@@ -1,5 +1,3 @@
-// Save this as: ./_components/integrated-floating-toolbar.tsx
-
 import React, { useState } from "react"
 import {
   Lock,
@@ -19,8 +17,8 @@ import {
   Triangle,
 } from "lucide-react"
 
-// 🔥 FIX: Import NodeShape from your existing types
-import { NodeShape } from "@/src/stores/mind-map-store"
+// Define NodeShape type locally if not available from your store
+export type NodeShape = "rectangle" | "circle" | "diamond" | "triangle"
 
 // Tool types for the floating toolbar
 export type ToolType =
@@ -46,7 +44,6 @@ export interface IntegratedFloatingToolbarProps {
   onLibrary?: () => void
 
   // Integration with your existing mind map functions
-  // 🔥 FIX: Match your existing addNode function signature
   onAddNode?: (position?: { x: number; y: number }, shape?: NodeShape) => void
   isLocked?: boolean
   onToggleLock?: () => void
@@ -132,7 +129,7 @@ export default function IntegratedFloatingToolbar({
       // Handle shape tools - both set as active tool and trigger node creation
       const shape = toolId as NodeShape
       onShapeChange?.(shape)
-      // 🔥 FIX: Call with undefined position to use default, and pass shape
+      // Call with undefined position to use default, and pass shape
       onAddNode?.(undefined, shape)
       onToolChange?.(toolId)
     } else if (toolId === "arrow") {
@@ -165,9 +162,9 @@ export default function IntegratedFloatingToolbar({
       className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-50 ${className}`}
     >
       {/* Main Toolbar */}
-      <div className="flex items-center bg-gray-900/90 backdrop-blur-md rounded-2xl border border-gray-700/50 shadow-2xl px-3 py-2">
+      <div className="flex items-center bg-gray-900/90 backdrop-blur-md rounded-xl border border-gray-700/50 shadow-2xl px-2 py-1.5">
         {/* Tool Buttons */}
-        <div className="flex items-center space-x-1">
+        <div className="flex items-center space-x-0.5">
           {tools.map((tool) => {
             let isActive = false
 
@@ -188,20 +185,20 @@ export default function IntegratedFloatingToolbar({
               <button
                 key={tool.id}
                 onClick={() => handleToolClick(tool.id)}
-                className={`relative p-2.5 rounded-xl transition-all duration-200 group ${
+                className={`relative p-2 rounded-lg transition-all duration-150 group ${
                   isActive
-                    ? "bg-purple-600 text-white shadow-lg"
+                    ? "bg-purple-600 text-white shadow-md"
                     : "text-gray-300 hover:text-white hover:bg-gray-700/50"
                 }`}
                 title={`${tool.label} ${
                   tool.shortcut ? `(${tool.shortcut})` : ""
                 }`}
               >
-                <Icon className="w-5 h-5" />
+                <Icon className="w-4 h-4" />
 
                 {/* Dynamic Subscript Badge - use shape-specific subscripts for shape tools */}
                 {tool.subscript && (
-                  <span className="absolute -bottom-1 -right-1 bg-gray-700 text-gray-300 text-xs font-mono rounded-full w-4 h-4 flex items-center justify-center border border-gray-600">
+                  <span className="absolute -bottom-0.5 -right-0.5 bg-gray-700 text-gray-300 text-xs font-mono rounded-full w-3.5 h-3.5 flex items-center justify-center border border-gray-600">
                     {["rectangle", "circle", "diamond"].includes(tool.id)
                       ? getShapeSubscript(tool.id as NodeShape)
                       : tool.subscript}
@@ -210,7 +207,7 @@ export default function IntegratedFloatingToolbar({
 
                 {/* Active Indicator */}
                 {isActive && (
-                  <div className="absolute inset-0 rounded-xl ring-2 ring-purple-400/50 ring-offset-2 ring-offset-gray-900/90" />
+                  <div className="absolute inset-0 rounded-lg ring-2 ring-purple-400/50 ring-offset-1 ring-offset-gray-900/90" />
                 )}
               </button>
             )
@@ -218,39 +215,39 @@ export default function IntegratedFloatingToolbar({
         </div>
 
         {/* Separator */}
-        <div className="w-px h-8 bg-gray-600/50 mx-3" />
+        <div className="w-px h-6 bg-gray-600/50 mx-2" />
 
         {/* Style/Theme Button */}
         <button
-          className="p-2.5 rounded-xl text-gray-300 hover:text-white hover:bg-gray-700/50 transition-all duration-200"
+          className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700/50 transition-all duration-150"
           title="Styles & Themes"
         >
-          <Palette className="w-5 h-5" />
+          <Palette className="w-4 h-4" />
         </button>
 
         {/* Separator */}
-        <div className="w-px h-8 bg-gray-600/50 mx-3" />
+        <div className="w-px h-6 bg-gray-600/50 mx-2" />
 
         {/* Library Button */}
         <button
           onClick={onLibrary}
-          className="p-2.5 rounded-xl text-gray-300 hover:text-white hover:bg-gray-700/50 transition-all duration-200"
+          className="p-2 rounded-lg text-gray-300 hover:text-white hover:bg-gray-700/50 transition-all duration-150"
           title="Library"
         >
-          <Library className="w-5 h-5" />
+          <Library className="w-4 h-4" />
         </button>
 
         {/* Share Button */}
         <button
           onClick={onShare}
-          className="relative ml-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-200 flex items-center space-x-2 font-medium shadow-lg"
+          className="relative ml-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-all duration-150 flex items-center space-x-1.5 font-medium shadow-md text-sm"
           title="Share Mind Map"
         >
-          <Share className="w-4 h-4" />
+          <Share className="w-3.5 h-3.5" />
           <span>Share</span>
 
           {/* Badge Indicator */}
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-gray-900/90 flex items-center justify-center">
+          <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-gray-900/90 flex items-center justify-center">
             <div className="w-1 h-1 bg-white rounded-full" />
           </div>
         </button>

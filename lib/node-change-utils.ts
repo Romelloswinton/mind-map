@@ -1,5 +1,5 @@
-import { NodeChange, EdgeChange, Node, Edge } from "@xyflow/react"
 import { MindMapNodeData } from "@/src/stores/mind-map-store"
+import { NodeChange, EdgeChange, Node, Edge } from "@xyflow/react"
 
 /**
  * 🔥 Type-safe utilities for handling React Flow changes
