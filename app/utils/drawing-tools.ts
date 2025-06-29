@@ -1,4 +1,6 @@
-// Save as: ./utils/drawing-tools.ts
+// =====================================
+// DRAWING TOOLS UTILITIES - app/utils/drawing-tools.ts
+// =====================================
 
 import {
   TOOLS_WITH_FILL,
@@ -8,15 +10,16 @@ import {
   VALIDATION_RULES,
   CONTRAST_RATIOS,
 } from "@/app/constants/drawing-tools"
-import {
-  RGBColor,
+
+import type {
   DrawingToolType,
   DrawingToolSettings,
-  StrokeStyles,
-  FillStyles,
-  SloppinessStyles,
-  KeyboardModifiers,
-  KeyboardShortcutHandler,
+  ColorSwatch,
+  StrokeWidthOption,
+  StrokeStyleOption,
+  SloppinessLevel,
+  EdgeStyle,
+  ToolInfo,
 } from "@/src/types/drawing-tools"
 
 // =====================================
@@ -47,13 +50,19 @@ export const toolSupportsSloppiness = (tool: DrawingToolType): boolean => {
 /**
  * Get tool information (icon and name)
  */
-export const getToolInfo = (tool: DrawingToolType) => {
-  return TOOL_INFO[tool] || { icon: null, name: "Unknown Tool" }
+export const getToolInfo = (tool: DrawingToolType): ToolInfo => {
+  return TOOL_INFO[tool] || { icon: null as any, name: "Unknown Tool" }
 }
 
 // =====================================
 // COLOR UTILITIES
 // =====================================
+
+export interface RGBColor {
+  r: number
+  g: number
+  b: number
+}
 
 /**
  * Convert hex color to RGB values
@@ -143,6 +152,21 @@ const getRelativeLuminance = (rgb: RGBColor): number => {
 // =====================================
 // STYLE GENERATION UTILITIES
 // =====================================
+
+export interface StrokeStyles {
+  stroke: string
+  strokeWidth: string
+  strokeDasharray: string
+}
+
+export interface FillStyles {
+  fill: string
+}
+
+export interface SloppinessStyles {
+  filter: string
+  transform: string
+}
 
 /**
  * Get CSS styles for stroke
@@ -340,6 +364,17 @@ export const normalizeToolSettings = (
     normalized.edgeStyle = settings.edgeStyle
   }
 
+  if (typeof settings.fontSize === "number") {
+    normalized.fontSize = Math.max(
+      VALIDATION_RULES.FONT_SIZE.min,
+      Math.min(VALIDATION_RULES.FONT_SIZE.max, settings.fontSize)
+    )
+  }
+
+  if (settings.fontFamily) {
+    normalized.fontFamily = settings.fontFamily
+  }
+
   return normalized
 }
 
@@ -383,9 +418,6 @@ export const throttle = <T extends (...args: any[]) => any>(
 /**
  * Deep merge two objects
  */
-/**
- * Deep merge two objects
- */
 export const deepMerge = <T extends Record<string, any>>(
   target: T,
   source: Partial<T>
@@ -405,24 +437,11 @@ export const deepMerge = <T extends Record<string, any>>(
         targetValue !== null &&
         !Array.isArray(targetValue)
       ) {
-        // Both are objects, merge recursively
         result[key] = deepMerge(
           targetValue as Record<string, any>,
           sourceValue as Record<string, any>
         ) as T[Extract<keyof T, string>]
-      } else if (
-        typeof sourceValue === "object" &&
-        sourceValue !== null &&
-        !Array.isArray(sourceValue) &&
-        (targetValue === undefined || targetValue === null)
-      ) {
-        // Source is object but target is undefined/null, merge with empty object
-        result[key] = deepMerge(
-          {} as Record<string, any>,
-          sourceValue as Record<string, any>
-        ) as T[Extract<keyof T, string>]
       } else {
-        // Direct assignment for non-objects
         result[key] = sourceValue as T[Extract<keyof T, string>]
       }
     }
@@ -448,8 +467,8 @@ export const clamp = (value: number, min: number, max: number): number => {
 /**
  * Linear interpolation between two values
  */
-export const lerp = (start: number, end: number, factor: number): string => {
-  return (start + (end - start) * factor).toString()
+export const lerp = (start: number, end: number, factor: number): number => {
+  return start + (end - start) * factor
 }
 
 /**
@@ -479,59 +498,6 @@ export const deepEqual = (obj1: any, obj2: any): boolean => {
   }
 
   return true
-}
-
-// =====================================
-// KEYBOARD UTILITIES
-// =====================================
-
-/**
- * Keyboard shortcut helper
- */
-export const createKeyboardShortcut = (
-  key: string,
-  callback: () => void,
-  modifiers: KeyboardModifiers = {}
-): KeyboardShortcutHandler => {
-  return (event: KeyboardEvent) => {
-    const matchesModifiers =
-      (!modifiers.ctrl || event.ctrlKey) &&
-      (!modifiers.shift || event.shiftKey) &&
-      (!modifiers.alt || event.altKey)
-
-    if (event.key.toLowerCase() === key.toLowerCase() && matchesModifiers) {
-      event.preventDefault()
-      callback()
-    }
-  }
-}
-
-/**
- * Check if event target is an input element
- */
-export const isInputElement = (target: EventTarget | null): boolean => {
-  if (!target) return false
-
-  const element = target as HTMLElement
-  const tagName = element.tagName.toLowerCase()
-
-  return (
-    ["input", "textarea", "select"].includes(tagName) ||
-    element.contentEditable === "true"
-  )
-}
-
-/**
- * Get modifier key string for display
- */
-export const getModifierString = (modifiers: KeyboardModifiers): string => {
-  const parts: string[] = []
-
-  if (modifiers.ctrl) parts.push("Ctrl")
-  if (modifiers.alt) parts.push("Alt")
-  if (modifiers.shift) parts.push("Shift")
-
-  return parts.join("+")
 }
 
 // =====================================
@@ -572,7 +538,6 @@ export const getAccessibleColor = (
     return targetColor
   }
 
-  // Return high contrast alternative
   return isLightColor(backgroundColor) ? "#000000" : "#ffffff"
 }
 
@@ -595,126 +560,6 @@ export const getColorDescription = (color: string): string => {
   }
 
   return colorNames[color.toLowerCase()] || `Color ${color}`
-}
-
-// =====================================
-// STORAGE UTILITIES
-// =====================================
-
-/**
- * Safe localStorage getter
- */
-export const getStorageItem = (key: string, defaultValue: any = null): any => {
-  try {
-    const item = localStorage.getItem(key)
-    return item ? JSON.parse(item) : defaultValue
-  } catch (error) {
-    console.warn(`Failed to get storage item ${key}:`, error)
-    return defaultValue
-  }
-}
-
-/**
- * Safe localStorage setter
- */
-export const setStorageItem = (key: string, value: any): boolean => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value))
-    return true
-  } catch (error) {
-    console.warn(`Failed to set storage item ${key}:`, error)
-    return false
-  }
-}
-
-/**
- * Safe localStorage remover
- */
-export const removeStorageItem = (key: string): boolean => {
-  try {
-    localStorage.removeItem(key)
-    return true
-  } catch (error) {
-    console.warn(`Failed to remove storage item ${key}:`, error)
-    return false
-  }
-}
-
-// =====================================
-// CANVAS/SVG UTILITIES
-// =====================================
-
-/**
- * Create SVG filter for sloppiness effects
- */
-export const createSloppinessFilter = (
-  id: string,
-  intensity: number
-): string => {
-  const turbulenceBaseFreq = 0.01 + intensity * 0.02
-  const displacementScale = intensity * 2
-
-  return `
-      <filter id="${id}">
-        <feTurbulence baseFrequency="${turbulenceBaseFreq}" numOctaves="3" result="noise"/>
-        <feDisplacementMap in="SourceGraphic" in2="noise" scale="${displacementScale}"/>
-      </filter>
-    `
-}
-
-/**
- * Calculate path for different shapes
- */
-export const getShapePath = (
-  type: "rectangle" | "circle" | "diamond" | "triangle",
-  width: number,
-  height: number,
-  x: number = 0,
-  y: number = 0
-): string => {
-  switch (type) {
-    case "rectangle":
-      return `M ${x} ${y} L ${x + width} ${y} L ${x + width} ${
-        y + height
-      } L ${x} ${y + height} Z`
-
-    case "circle":
-      const radius = Math.min(width, height) / 2
-      const cx = x + width / 2
-      const cy = y + height / 2
-      return `M ${cx - radius} ${cy} A ${radius} ${radius} 0 1 1 ${
-        cx + radius
-      } ${cy} A ${radius} ${radius} 0 1 1 ${cx - radius} ${cy} Z`
-
-    case "diamond":
-      const centerX = x + width / 2
-      const centerY = y + height / 2
-      return `M ${centerX} ${y} L ${x + width} ${centerY} L ${centerX} ${
-        y + height
-      } L ${x} ${centerY} Z`
-
-    case "triangle":
-      return `M ${x + width / 2} ${y} L ${x + width} ${y + height} L ${x} ${
-        y + height
-      } Z`
-
-    default:
-      return ""
-  }
-}
-
-/**
- * Convert degrees to radians
- */
-export const degreesToRadians = (degrees: number): number => {
-  return degrees * (Math.PI / 180)
-}
-
-/**
- * Convert radians to degrees
- */
-export const radiansToDegrees = (radians: number): number => {
-  return radians * (180 / Math.PI)
 }
 
 // =====================================

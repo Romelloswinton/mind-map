@@ -1,28 +1,46 @@
+// =====================================
+// COMPLETE FIXED MIND MAP STORE - src/stores/mind-map-store.ts
+// =====================================
+
 import { create } from "zustand"
 import { Node, Edge } from "@xyflow/react"
 
-// 🔥 NEW: Import types from toolbar
-export type NodeShape = "rectangle" | "circle" | "diamond" | "triangle"
-export type ConnectionType = "straight" | "curved" | "step" | "bezier"
+// ✅ FIXED: Import from unified types
+import type {
+  NodeShape,
+  LineToolData,
+  TextToolData,
+  MindMapNodeData,
+} from "@/src/types/drawing-tools"
 
-// 🎨 ENHANCED: Extended MindMapNodeData with drawing tool properties
-export interface MindMapNodeData extends Record<string, unknown> {
-  text: string
-  color: string
-  isEditing: boolean
-  shape?: NodeShape
+import type { ConnectionType, ReactFlowNode } from "@/src/types/mindmap"
 
-  // 🎨 NEW: Drawing tool customization properties
-  strokeColor?: string
-  fillColor?: string
-  strokeWidth?: number
-  strokeStyle?: "solid" | "dashed" | "dotted"
-  opacity?: number
-  sloppiness?: number
-  edgeStyle?: "square" | "rounded"
+// ✅ FIXED: Define types that are specific to this store
+export interface ViewportState {
+  x: number
+  y: number
+  zoom: number
 }
 
-// 🎨 ENHANCED: Extended MindMapNode with drawing tool properties
+// ✅ FIXED: Enhanced MindMap interface for persistence
+export interface MindMap {
+  id: string
+  title: string
+  description?: string
+  thumbnail?: string
+  isPublic: boolean
+  createdAt: string
+  updatedAt: string
+  nodes?: MindMapNode[]
+  // ✅ Added support for drawing tools
+  lines?: LineToolData[]
+  texts?: TextToolData[]
+  _count: {
+    nodes: number
+  }
+}
+
+// ✅ FIXED: Enhanced MindMapNode for persistence
 export interface MindMapNode {
   id: string
   text: string
@@ -34,7 +52,7 @@ export interface MindMapNode {
   shape?: NodeShape
   parentId?: string
 
-  // 🎨 NEW: Drawing tool properties for persistence
+  // ✅ Drawing tool properties for persistence
   strokeColor?: string
   fillColor?: string
   strokeWidth?: number
@@ -42,32 +60,13 @@ export interface MindMapNode {
   opacity?: number
   sloppiness?: number
   edgeStyle?: "square" | "rounded"
+
+  // ✅ Consistent number timestamps
+  createdAt?: number
+  updatedAt?: number
 }
 
-export interface MindMap {
-  id: string
-  title: string
-  description?: string
-  thumbnail?: string
-  isPublic: boolean
-  createdAt: string
-  updatedAt: string
-  nodes?: MindMapNode[]
-  _count: {
-    nodes: number
-  }
-}
-
-export interface ViewportState {
-  x: number
-  y: number
-  zoom: number
-}
-
-// Type alias for our specific node type
-export type ReactFlowNode = Node<MindMapNodeData>
-
-// 🎨 NEW: Drawing tool default settings interface
+// ✅ FIXED: Drawing tool defaults interface
 export interface DrawingToolDefaults {
   strokeColor: string
   fillColor: string
@@ -86,15 +85,15 @@ interface MindMapStore {
   selectedNodeId: string | null
   viewport: ViewportState
 
-  // 🔥 NEW: UI interaction state
+  // ✅ UI interaction state
   selectedNodeShape: NodeShape
   connectionMode: ConnectionType | null
   isConnecting: boolean
 
-  // 🔥 NEW: Drawing tools state
+  // ✅ Drawing tools state
   drawingToolsManuallyOpened: boolean
 
-  // 🎨 NEW: Drawing tool defaults for new nodes
+  // ✅ Drawing tool defaults for new nodes
   drawingToolDefaults: DrawingToolDefaults
 
   // UI state
@@ -117,20 +116,20 @@ interface MindMapStore {
   setSelectedNodeId: (id: string | null) => void
   setViewport: (viewport: ViewportState) => void
 
-  // 🔥 NEW: Shape and connection actions
+  // ✅ Shape and connection actions
   setSelectedNodeShape: (shape: NodeShape) => void
   setConnectionMode: (mode: ConnectionType | null) => void
   setIsConnecting: (connecting: boolean) => void
 
-  // 🔥 NEW: Drawing tools actions
+  // ✅ Drawing tools actions
   setDrawingToolsManuallyOpened: (opened: boolean) => void
 
-  // 🎨 NEW: Drawing tool defaults management
+  // ✅ Drawing tool defaults management
   setDrawingToolDefaults: (defaults: Partial<DrawingToolDefaults>) => void
   resetDrawingToolDefaults: () => void
   getDrawingToolDefaults: () => DrawingToolDefaults
 
-  // 🎨 ENHANCED: Node styling actions
+  // ✅ ENHANCED: Node styling actions with drawing tools integration
   applyDrawingToolsToNode: (
     nodeId: string,
     properties: Partial<MindMapNodeData>
@@ -139,6 +138,17 @@ interface MindMapStore {
     properties: Partial<MindMapNodeData>
   ) => void
   resetNodeStyling: (nodeId: string) => void
+
+  // ✅ Drawing tools panel integration methods
+  updateNodeFromPanel: (
+    nodeId: string,
+    updates: Partial<MindMapNodeData>
+  ) => void
+  getNodeForPanel: (nodeId: string) => ReactFlowNode | null
+  subscribeToNodeUpdates: (
+    nodeId: string,
+    callback: (node: ReactFlowNode) => void
+  ) => () => void
 
   // Canvas specific actions
   addNodeAtPosition: (
@@ -183,7 +193,7 @@ interface MindMapStore {
 
 const initialViewport: ViewportState = { x: 0, y: 0, zoom: 1 }
 
-// 🎨 NEW: Default drawing tool settings
+// ✅ Default drawing tool settings
 const defaultDrawingToolDefaults: DrawingToolDefaults = {
   strokeColor: "#6b7280",
   fillColor: "#3b82f6",
@@ -194,6 +204,12 @@ const defaultDrawingToolDefaults: DrawingToolDefaults = {
   edgeStyle: "rounded",
 }
 
+// ✅ Node update callbacks registry
+const nodeUpdateCallbacks = new Map<
+  string,
+  Set<(node: ReactFlowNode) => void>
+>()
+
 export const useMindMapStore = create<MindMapStore>((set, get) => ({
   // Initial state
   mindMapId: null,
@@ -202,15 +218,15 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
   selectedNodeId: null,
   viewport: initialViewport,
 
-  // 🔥 NEW: UI interaction state
+  // ✅ UI interaction state
   selectedNodeShape: "rectangle",
   connectionMode: null,
   isConnecting: false,
 
-  // 🔥 NEW: Drawing tools state
+  // ✅ Drawing tools state
   drawingToolsManuallyOpened: false,
 
-  // 🎨 NEW: Drawing tool defaults
+  // ✅ Drawing tool defaults
   drawingToolDefaults: { ...defaultDrawingToolDefaults },
 
   isLoading: false,
@@ -227,6 +243,14 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
   setNodes: (nodes) => {
     get().pushToHistory()
     set({ nodes, hasUnsavedChanges: true })
+
+    // ✅ Notify all node update callbacks
+    nodes.forEach((node) => {
+      const callbacks = nodeUpdateCallbacks.get(node.id)
+      if (callbacks) {
+        callbacks.forEach((callback) => callback(node))
+      }
+    })
   },
 
   setEdges: (edges) => {
@@ -238,13 +262,81 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
     const { nodes } = get()
     get().pushToHistory()
 
+    // ✅ FIXED: Enhanced update with timestamp
+    const enhancedData = {
+      ...data,
+      updatedAt: Date.now(),
+    }
+
     const updatedNodes = nodes.map((node) =>
-      node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
+      node.id === nodeId
+        ? { ...node, data: { ...node.data, ...enhancedData } }
+        : node
     )
 
     set({ nodes: updatedNodes, hasUnsavedChanges: true })
 
-    console.log(`📝 Updated node ${nodeId}:`, data)
+    // ✅ Notify callbacks for this specific node
+    const updatedNode = updatedNodes.find((n) => n.id === nodeId)
+    if (updatedNode) {
+      const callbacks = nodeUpdateCallbacks.get(nodeId)
+      if (callbacks) {
+        callbacks.forEach((callback) => callback(updatedNode))
+      }
+    }
+
+    console.log(`📝 Updated node ${nodeId}:`, enhancedData)
+  },
+
+  // ✅ ENHANCED: Drawing tools panel integration method
+  updateNodeFromPanel: (nodeId, updates) => {
+    console.log(`🎨 Panel updating node ${nodeId}:`, updates)
+
+    const { nodes } = get()
+    const currentNode = nodes.find((n) => n.id === nodeId)
+
+    if (!currentNode) {
+      console.error(`❌ Node ${nodeId} not found for panel update`)
+      return
+    }
+
+    // Enhanced updates with timestamp and validation
+    const enhancedUpdates = {
+      ...updates,
+      // Ensure we maintain node integrity
+      text: updates.text ?? currentNode.data.text,
+      color: updates.fillColor ?? updates.color ?? currentNode.data.color,
+      updatedAt: Date.now(),
+    }
+
+    // Use the standard updateNode method to maintain consistency
+    get().updateNode(nodeId, enhancedUpdates)
+
+    console.log(`✅ Panel: Node ${nodeId} updated successfully`)
+  },
+
+  // ✅ Get node for panel
+  getNodeForPanel: (nodeId) => {
+    const { nodes } = get()
+    return nodes.find((n) => n.id === nodeId) || null
+  },
+
+  // ✅ Subscribe to node updates
+  subscribeToNodeUpdates: (nodeId, callback) => {
+    if (!nodeUpdateCallbacks.has(nodeId)) {
+      nodeUpdateCallbacks.set(nodeId, new Set())
+    }
+
+    const callbacks = nodeUpdateCallbacks.get(nodeId)!
+    callbacks.add(callback)
+
+    // Return unsubscribe function
+    return () => {
+      callbacks.delete(callback)
+      if (callbacks.size === 0) {
+        nodeUpdateCallbacks.delete(nodeId)
+      }
+    }
   },
 
   deleteNode: (nodeId) => {
@@ -257,6 +349,9 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       (edge) => edge.source !== nodeId && edge.target !== nodeId
     )
 
+    // ✅ Clean up callbacks for deleted node
+    nodeUpdateCallbacks.delete(nodeId)
+
     set({
       nodes: updatedNodes,
       edges: updatedEdges,
@@ -268,24 +363,31 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
   addNode: (node) => {
     const { nodes } = get()
     get().pushToHistory()
-    set({ nodes: [...nodes, node], hasUnsavedChanges: true })
+    const newNodes = [...nodes, node]
+    set({ nodes: newNodes, hasUnsavedChanges: true })
+
+    // ✅ Notify callbacks for new node
+    const callbacks = nodeUpdateCallbacks.get(node.id)
+    if (callbacks) {
+      callbacks.forEach((callback) => callback(node))
+    }
   },
 
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
 
   setViewport: (viewport) => set({ viewport }),
 
-  // 🔥 NEW: Shape and connection setters
+  // ✅ Shape and connection setters
   setSelectedNodeShape: (shape) => set({ selectedNodeShape: shape }),
   setConnectionMode: (mode) =>
     set({ connectionMode: mode, isConnecting: !!mode }),
   setIsConnecting: (connecting) => set({ isConnecting: connecting }),
 
-  // 🔥 NEW: Drawing tools setter
+  // ✅ Drawing tools setter
   setDrawingToolsManuallyOpened: (opened) =>
     set({ drawingToolsManuallyOpened: opened }),
 
-  // 🎨 NEW: Drawing tool defaults management
+  // ✅ Drawing tool defaults management
   setDrawingToolDefaults: (defaults) => {
     const currentDefaults = get().drawingToolDefaults
     set({
@@ -302,22 +404,14 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
 
   getDrawingToolDefaults: () => get().drawingToolDefaults,
 
-  // 🎨 NEW: Node styling actions
+  // ✅ ENHANCED: Node styling actions with proper integration
   applyDrawingToolsToNode: (nodeId, properties) => {
-    const { nodes } = get()
-
-    const updatedNodes = nodes.map((node) =>
-      node.id === nodeId
-        ? { ...node, data: { ...node.data, ...properties } }
-        : node
-    )
-
-    set({ nodes: updatedNodes, hasUnsavedChanges: true })
-    console.log(`🎨 Applied styling to node ${nodeId}:`, properties)
+    console.log(`🎨 Applying drawing tools to node ${nodeId}:`, properties)
+    get().updateNodeFromPanel(nodeId, properties)
   },
 
   applyDrawingToolsToSelectedNodes: (properties) => {
-    const { nodes, selectedNodeId } = get()
+    const { selectedNodeId } = get()
 
     if (!selectedNodeId) {
       console.warn("⚠️ No node selected for styling")
@@ -328,7 +422,7 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
   },
 
   resetNodeStyling: (nodeId) => {
-    const { nodes } = get()
+    const { drawingToolDefaults } = get()
 
     const resetProperties: Partial<MindMapNodeData> = {
       strokeColor: undefined,
@@ -338,26 +432,14 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       opacity: undefined,
       sloppiness: undefined,
       edgeStyle: undefined,
+      color: drawingToolDefaults.fillColor, // Reset to default color
     }
 
-    const updatedNodes = nodes.map((node) =>
-      node.id === nodeId
-        ? {
-            ...node,
-            data: {
-              ...node.data,
-              ...resetProperties,
-              color: get().drawingToolDefaults.fillColor, // Reset to default color
-            },
-          }
-        : node
-    )
-
-    set({ nodes: updatedNodes, hasUnsavedChanges: true })
+    get().updateNodeFromPanel(nodeId, resetProperties)
     console.log(`🔄 Reset styling for node ${nodeId}`)
   },
 
-  // 🔥 UPDATED: Canvas specific actions with shape and drawing tool support
+  // ✅ UPDATED: Canvas specific actions with shape and drawing tool support
   addNodeAtPosition: (position, parentId, shape) => {
     const { nodes, edges, selectedNodeShape, drawingToolDefaults } = get()
     const nodeId = `node-${Date.now()}-${Math.random()
@@ -366,7 +448,8 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
 
     get().pushToHistory()
 
-    // 🎨 NEW: Apply current drawing tool defaults to new nodes
+    // ✅ Apply current drawing tool defaults to new nodes
+    const timestamp = Date.now()
     const newNode: ReactFlowNode = {
       id: nodeId,
       type: "mindMapNode",
@@ -381,7 +464,7 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
         isEditing: true,
         shape: shape || selectedNodeShape,
 
-        // 🎨 Apply current drawing tool defaults
+        // ✅ Apply current drawing tool defaults
         strokeColor: drawingToolDefaults.strokeColor,
         fillColor: drawingToolDefaults.fillColor,
         strokeWidth: drawingToolDefaults.strokeWidth,
@@ -389,6 +472,10 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
         opacity: drawingToolDefaults.opacity,
         sloppiness: drawingToolDefaults.sloppiness,
         edgeStyle: drawingToolDefaults.edgeStyle,
+
+        // ✅ Consistent timestamps
+        createdAt: timestamp,
+        updatedAt: timestamp,
       },
     }
 
@@ -406,18 +493,25 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       newEdges = [...edges, edge]
     }
 
+    const newNodes = [...nodes, newNode]
     set({
-      nodes: [...nodes, newNode],
+      nodes: newNodes,
       edges: newEdges,
       selectedNodeId: nodeId,
       hasUnsavedChanges: true,
     })
 
+    // ✅ Notify callbacks for new node
+    const callbacks = nodeUpdateCallbacks.get(nodeId)
+    if (callbacks) {
+      callbacks.forEach((callback) => callback(newNode))
+    }
+
     console.log(`🎨 Created node with drawing tool defaults:`, newNode.data)
     return nodeId
   },
 
-  // 🔥 UPDATED: Connection with type support
+  // ✅ UPDATED: Connection with type support
   connectNodes: (sourceId, targetId, connectionType) => {
     const { edges, connectionMode } = get()
     get().pushToHistory()
@@ -429,7 +523,7 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       return
     }
 
-    // 🔥 NEW: Determine edge type based on connection mode or parameter
+    // ✅ Determine edge type based on connection mode or parameter
     const edgeType = connectionType || connectionMode || "curved"
 
     // Create properly typed edge based on connection type
@@ -478,7 +572,7 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
     set({ edges: [...edges, newEdge], hasUnsavedChanges: true })
   },
 
-  // 🎨 ENHANCED: Duplicate node with all styling properties
+  // ✅ ENHANCED: Duplicate node with all styling properties
   duplicateNode: (nodeId) => {
     const { nodes } = get()
     const nodeToDuplicate = nodes.find((node) => node.id === nodeId)
@@ -487,9 +581,10 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
 
     get().pushToHistory()
 
+    const timestamp = Date.now()
     const duplicatedNode: ReactFlowNode = {
       ...nodeToDuplicate,
-      id: `node-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `node-${timestamp}-${Math.random().toString(36).substr(2, 9)}`,
       position: {
         x: nodeToDuplicate.position.x + 150,
         y: nodeToDuplicate.position.y + 50,
@@ -501,14 +596,23 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       data: {
         ...nodeToDuplicate.data, // This now includes all drawing tool properties
         text: `${nodeToDuplicate.data.text} (Copy)`,
+        createdAt: timestamp,
+        updatedAt: timestamp,
       },
     }
 
+    const newNodes = [...nodes, duplicatedNode]
     set({
-      nodes: [...nodes, duplicatedNode],
+      nodes: newNodes,
       selectedNodeId: duplicatedNode.id,
       hasUnsavedChanges: true,
     })
+
+    // ✅ Notify callbacks for duplicated node
+    const callbacks = nodeUpdateCallbacks.get(duplicatedNode.id)
+    if (callbacks) {
+      callbacks.forEach((callback) => callback(duplicatedNode))
+    }
 
     console.log(`📋 Duplicated node with all styling:`, duplicatedNode.data)
   },
@@ -547,12 +651,24 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
 
     if (historyIndex > 0) {
       const previousState = history[historyIndex - 1]
+      const newNodes = [...previousState.nodes]
+      const newEdges = [...previousState.edges]
+
       set({
-        nodes: [...previousState.nodes],
-        edges: [...previousState.edges],
+        nodes: newNodes,
+        edges: newEdges,
         historyIndex: historyIndex - 1,
         hasUnsavedChanges: true,
       })
+
+      // ✅ Notify all callbacks after undo
+      newNodes.forEach((node) => {
+        const callbacks = nodeUpdateCallbacks.get(node.id)
+        if (callbacks) {
+          callbacks.forEach((callback) => callback(node))
+        }
+      })
+
       console.log("↩️ Undo applied")
       return true
     }
@@ -564,12 +680,24 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
 
     if (historyIndex < history.length - 1) {
       const nextState = history[historyIndex + 1]
+      const newNodes = [...nextState.nodes]
+      const newEdges = [...nextState.edges]
+
       set({
-        nodes: [...nextState.nodes],
-        edges: [...nextState.edges],
+        nodes: newNodes,
+        edges: newEdges,
         historyIndex: historyIndex + 1,
         hasUnsavedChanges: true,
       })
+
+      // ✅ Notify all callbacks after redo
+      newNodes.forEach((node) => {
+        const callbacks = nodeUpdateCallbacks.get(node.id)
+        if (callbacks) {
+          callbacks.forEach((callback) => callback(node))
+        }
+      })
+
       console.log("↪️ Redo applied")
       return true
     }
@@ -587,7 +715,10 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
   },
 
   // Utility functions
-  reset: () =>
+  reset: () => {
+    // ✅ Clear all node callbacks on reset
+    nodeUpdateCallbacks.clear()
+
     set({
       mindMapId: null,
       nodes: [],
@@ -598,14 +729,15 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
       connectionMode: null,
       isConnecting: false,
       drawingToolsManuallyOpened: false,
-      drawingToolDefaults: { ...defaultDrawingToolDefaults }, // 🎨 Reset drawing tool defaults
+      drawingToolDefaults: { ...defaultDrawingToolDefaults },
       isLoading: false,
       isSaving: false,
       hasUnsavedChanges: false,
       lastSaved: null,
       history: [],
       historyIndex: -1,
-    }),
+    })
+  },
 
   exportData: () => {
     const { nodes, edges, viewport } = get()
@@ -613,18 +745,30 @@ export const useMindMapStore = create<MindMapStore>((set, get) => ({
   },
 
   importData: (data) => {
+    const newNodes = data.nodes || []
+    const newEdges = data.edges || []
+
     set({
-      nodes: data.nodes || [],
-      edges: data.edges || [],
+      nodes: newNodes,
+      edges: newEdges,
       viewport: data.viewport || initialViewport,
       hasUnsavedChanges: true,
     })
+
+    // ✅ Notify callbacks for imported nodes
+    newNodes.forEach((node) => {
+      const callbacks = nodeUpdateCallbacks.get(node.id)
+      if (callbacks) {
+        callbacks.forEach((callback) => callback(node))
+      }
+    })
+
     get().pushToHistory()
     console.log("📥 Data imported successfully")
   },
 }))
 
-// 🎨 NEW: Helper selectors for drawing tools integration
+// ✅ ENHANCED: Helper selectors for drawing tools integration with proper panel methods
 export const useMindMapDrawingTools = () => {
   const store = useMindMapStore()
 
@@ -635,10 +779,15 @@ export const useMindMapDrawingTools = () => {
     resetDrawingToolDefaults: store.resetDrawingToolDefaults,
     getDrawingToolDefaults: store.getDrawingToolDefaults,
 
-    // Node styling actions
+    // ✅ ENHANCED: Node styling actions with panel integration
     applyDrawingToolsToNode: store.applyDrawingToolsToNode,
     applyDrawingToolsToSelectedNodes: store.applyDrawingToolsToSelectedNodes,
     resetNodeStyling: store.resetNodeStyling,
+
+    // ✅ Panel integration methods
+    updateNodeFromPanel: store.updateNodeFromPanel,
+    getNodeForPanel: store.getNodeForPanel,
+    subscribeToNodeUpdates: store.subscribeToNodeUpdates,
 
     // Selected node info
     selectedNodeId: store.selectedNodeId,
@@ -663,5 +812,73 @@ export const useMindMapDrawingTools = () => {
         edgeStyle: selectedNode.data.edgeStyle,
       }
     },
+  }
+}
+
+// ✅ Hook for drawing tools panel to properly integrate with mind map store
+export const useMindMapPanelIntegration = () => {
+  const updateNodeFromPanel = useMindMapStore(
+    (state) => state.updateNodeFromPanel
+  )
+  const getNodeForPanel = useMindMapStore((state) => state.getNodeForPanel)
+  const subscribeToNodeUpdates = useMindMapStore(
+    (state) => state.subscribeToNodeUpdates
+  )
+  const selectedNodeId = useMindMapStore((state) => state.selectedNodeId)
+
+  return {
+    updateNodeFromPanel,
+    getNodeForPanel,
+    subscribeToNodeUpdates,
+    selectedNodeId,
+    // ✅ Convenience method for panel updates
+    updateSelectedNode: (updates: Partial<MindMapNodeData>) => {
+      if (selectedNodeId) {
+        updateNodeFromPanel(selectedNodeId, updates)
+      }
+    },
+  }
+}
+
+// ✅ Enhanced selectors for performance
+export const useMindMapSelectors = () => {
+  const store = useMindMapStore()
+
+  return {
+    // Core data
+    nodes: store.nodes,
+    edges: store.edges,
+    selectedNodeId: store.selectedNodeId,
+    viewport: store.viewport,
+
+    // UI state
+    isLoading: store.isLoading,
+    isSaving: store.isSaving,
+    hasUnsavedChanges: store.hasUnsavedChanges,
+    lastSaved: store.lastSaved,
+
+    // Drawing tools
+    selectedNodeShape: store.selectedNodeShape,
+    drawingToolDefaults: store.drawingToolDefaults,
+    drawingToolsManuallyOpened: store.drawingToolsManuallyOpened,
+
+    // History
+    canUndo: store.canUndo(),
+    canRedo: store.canRedo(),
+
+    // Computed values
+    selectedNode: store.selectedNodeId
+      ? store.nodes.find((n) => n.id === store.selectedNodeId)
+      : null,
+    nodeCount: store.nodes.length,
+    edgeCount: store.edges.length,
+
+    // Actions
+    setSelectedNodeId: store.setSelectedNodeId,
+    setViewport: store.setViewport,
+    setSelectedNodeShape: store.setSelectedNodeShape,
+    undo: store.undo,
+    redo: store.redo,
+    reset: store.reset,
   }
 }

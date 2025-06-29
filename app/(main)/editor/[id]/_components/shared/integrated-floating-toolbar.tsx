@@ -1,3 +1,6 @@
+// Fixed IntegratedFloatingToolbar Component - Updated Type Consistency
+// File: app/mind-map/[id]/_components/integrated-floating-toolbar.tsx
+
 import React, { useState } from "react"
 import {
   Lock,
@@ -11,21 +14,11 @@ import {
   Eraser,
   Share,
   Library,
+  Minus,
 } from "lucide-react"
 
-// Define NodeShape type locally if not available from your store
-export type NodeShape = "rectangle" | "circle" | "diamond" | "triangle"
-
-// Fixed ToolType to match your canvas - REMOVED problematic tools
-export type ToolType =
-  | "hand"
-  | "select"
-  | "rectangle"
-  | "diamond"
-  | "circle"
-  | "text"
-  | "image"
-  | "eraser"
+// ✅ FIXED: Import from unified types
+import type { ToolType, NodeShape } from "@/src/types"
 
 export interface IntegratedFloatingToolbarProps {
   // Mind map specific props from your existing implementation
@@ -46,7 +39,7 @@ interface ToolButton {
   shortcut?: string
 }
 
-// Fixed tools array - removed problematic tools
+// ✅ ENHANCED: Updated tools array with line tool and consistent typing
 const tools: ToolButton[] = [
   { id: "select", icon: MousePointer, label: "Selection Tool", shortcut: "V" },
   { id: "hand", icon: Hand, label: "Hand Tool", shortcut: "H" },
@@ -71,6 +64,13 @@ const tools: ToolButton[] = [
     subscript: "4",
     shortcut: "4",
   },
+  {
+    id: "line",
+    icon: Minus,
+    label: "Line",
+    subscript: "5",
+    shortcut: "5",
+  },
   { id: "text", icon: Type, label: "Text", subscript: "8", shortcut: "8" },
   { id: "image", icon: Image, label: "Image", subscript: "9", shortcut: "9" },
   {
@@ -82,21 +82,21 @@ const tools: ToolButton[] = [
   },
 ]
 
-export default function IntegratedFloatingToolbar({
+// ✅ ENHANCED: Export as named export with better typing
+export function IntegratedFloatingToolbar({
   activeTool = "select",
   onToolChange,
   isLocked = false,
   onToggleLock,
   className = "",
 }: IntegratedFloatingToolbarProps) {
-  const [showTooltip, setShowTooltip] = useState(false) // Default false to reduce clutter
+  const [showTooltip, setShowTooltip] = useState(false)
 
   const handleToolClick = (toolId: ToolType | "lock") => {
     if (toolId === "lock") {
       onToggleLock?.()
     } else {
-      // For all other tools, just call onToolChange
-      // Let the canvas handle the specific logic for each tool
+      // For all other tools, call onToolChange with proper typing
       onToolChange?.(toolId as ToolType)
     }
   }
@@ -110,8 +110,8 @@ export default function IntegratedFloatingToolbar({
         {/* Tool Buttons - Smaller */}
         <div className="flex items-center space-x-0.5">
           {tools.map((tool) => {
-            // Only check activeTool for non-lock tools
-            const isActive = tool.id === activeTool
+            // ✅ FIXED: Only check activeTool for non-lock tools
+            const isActive = tool.id !== "lock" && tool.id === activeTool
             const Icon = tool.icon
 
             return (
@@ -186,7 +186,7 @@ export default function IntegratedFloatingToolbar({
         </button>
       </div>
 
-      {/* Tooltip - Only show when enabled */}
+      {/* ✅ ENHANCED: Tooltip with better tool information */}
       {showTooltip && (
         <div className="mt-4 flex justify-center">
           <div className="bg-gray-800/95 backdrop-blur-sm text-gray-200 text-sm px-4 py-2 rounded-lg border border-gray-600/50 shadow-xl relative">
@@ -202,9 +202,28 @@ export default function IntegratedFloatingToolbar({
                 ✕
               </button>
             </div>
+
+            {/* ✅ ENHANCED: Additional help text for new tools */}
+            <div className="mt-2 text-xs text-gray-400 border-t border-gray-600 pt-2">
+              <div>Line (5): Click and drag to draw lines</div>
+              <div>Text (8): Click to add text anywhere</div>
+              <div>Shapes (2-4): Click to create nodes</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ ENHANCED: Active tool indicator */}
+      {activeTool && activeTool !== "select" && (
+        <div className="mt-2 flex justify-center">
+          <div className="bg-purple-600/90 text-white text-xs px-3 py-1 rounded-full shadow-lg">
+            {tools.find((t) => t.id === activeTool)?.label || activeTool} Active
           </div>
         </div>
       )}
     </div>
   )
 }
+
+// ✅ ENHANCED: Also provide as default export for compatibility
+export default IntegratedFloatingToolbar

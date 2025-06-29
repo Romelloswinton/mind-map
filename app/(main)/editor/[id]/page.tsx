@@ -1,5 +1,10 @@
-import { SimpleMindMapCanvas } from "./_components/mind-map-canvas"
+// File: app/mind-map/[id]/page.tsx
+
+"use client"
+
 import { Suspense } from "react"
+import { ReactFlowProvider } from "@xyflow/react" // ✅ Import ReactFlow provider
+import { SimpleMindMapCanvas } from "./_components"
 
 interface EditorPageProps {
   params: {
@@ -19,17 +24,22 @@ function CanvasLoading() {
   )
 }
 
-export default async function EditorPage({ params }: EditorPageProps) {
+// ✅ FIXED: Added ReactFlowProvider wrapper
+export default function EditorPage({ params }: EditorPageProps) {
   const { id } = params
 
   return (
-    <div className="h-screen bg-gray-50">
-      {/* Full Screen Canvas - No Header */}
-      <main className="h-full overflow-hidden">
-        <Suspense fallback={<CanvasLoading />}>
-          <SimpleMindMapCanvas mindMapId={id} />
-        </Suspense>
-      </main>
-    </div>
+    <ReactFlowProvider>
+      {" "}
+      {/* ✅ Wrap entire page with ReactFlowProvider */}
+      <div className="h-screen bg-gray-50">
+        {/* Full Screen Canvas - No Header */}
+        <main className="h-full overflow-hidden">
+          <Suspense fallback={<CanvasLoading />}>
+            <SimpleMindMapCanvas mindMapId={id} />
+          </Suspense>
+        </main>
+      </div>
+    </ReactFlowProvider>
   )
 }
